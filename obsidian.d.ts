@@ -849,7 +849,6 @@ export interface BasesOption {
      *
      * @public
      * @since 1.10.2
-     * @param config - Read-only copy of the current view configuration.
      */
     shouldHide?: () => boolean;
 }
@@ -4366,8 +4365,9 @@ export class Modal implements CloseableComponent {
      * @public
      */
     constructor(app: App);
+
     /**
-     * Show the modal on the active window. On mobile, the modal will animate on screen.
+     * Show the modal on the active window. On phones, the modal will animate on screen.
      * @public
      */
     open(): void;
@@ -4993,12 +4993,17 @@ export interface PluginManifest {
  * @public
  * @since 0.9.7
  */
-export abstract class PluginSettingTab extends SettingTab {
+export abstract class PluginSettingTab<T extends Record<string, any> = Record<string, any>> extends SettingTab {
 
     /**
      * @public
      */
-    constructor(app: App, plugin: Plugin);
+    constructor(app: App, plugin: Plugin, settings?: T);
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    getSettingDefinitions(): SettingDefinitionItem<keyof T & string>[];
 }
 
 /**
@@ -5460,7 +5465,7 @@ export class SecretComponent extends BaseComponent {
  * @public
  * @since 1.11.4
  */
-export class SecretStorage {
+export class SecretStorage extends Events {
 
     /**
      * Sets a secret in the storage.
@@ -5661,6 +5666,356 @@ export class Setting {
 
 /**
  * @public
+ * @since 1.13.0
+ */
+export interface SettingColorControl<K extends string = string> extends SettingControlBase<HexString, K> {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    type: 'color';
+}
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export type SettingControl<K extends string = string> = SettingToggleControl<K> | SettingDropdownControl<K> | SettingTextControl<K> | SettingSliderControl<K> | SettingColorControl<K>;
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingControlBase<V, K extends string = string> {
+    /**
+     * The config/storage property name used by getControlBinding.
+     * @public
+     * @since 1.13.0
+     */
+    key: K;
+    /**
+     * Fallback when the resolver returns undefined/null.
+     * @public
+     * @since 1.13.0
+     */
+    defaultValue?: V;
+}
+
+/**
+ * The resolved value and onChange handler for a setting control, as returned
+ * by {@link SettingTab.getControlBinding}.
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingControlBinding {
+    /**
+     * The current value of the control.
+     * @public
+     * @since 1.13.0
+     */
+    value: any;
+    /**
+     * Handler invoked when the control's value changes. Persists the new value
+     * to the underlying data source.
+     * @public
+     * @since 1.13.0
+     */
+    onChange: (value: any) => any;
+}
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export type SettingDefinition<K extends string = string> = SettingDefinitionControl<K> | SettingDefinitionRender | SettingDefinitionElement | SettingDefinitionAction | SettingDefinitionEmpty;
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDefinitionAction extends SettingDefinitionBase {
+    /**
+     * Callback invoked when the action setting is clicked.
+     * @public
+     * @since 1.13.0
+     */
+    action: () => void;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    control?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    render?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    element?: never;
+}
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDefinitionBase {
+    /**
+     * Display name — used for rendering and search.
+     * @public
+     * @since 1.13.0
+     */
+    name: string;
+    /**
+     * Description text — used for rendering and search.
+     * @public
+     * @since 1.13.0
+     */
+    desc?: string;
+    /**
+     * Additional search terms.
+     * @public
+     * @since 1.13.0
+     */
+    aliases?: string[];
+    /**
+     * Controls search visibility. `false` or `() => false` excludes from search. Default: true.
+     * @public
+     * @since 1.13.0
+     */
+    searchable?: boolean | (() => boolean);
+}
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDefinitionControl<K extends string = string> extends SettingDefinitionBase {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    control: SettingControl<K>;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    action?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    render?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    element?: never;
+}
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDefinitionElement extends SettingDefinitionBase {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    control?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    action?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    render?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    element: (listEl: HTMLElement) => void;
+}
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDefinitionEmpty extends SettingDefinitionBase {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    control?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    action?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    render?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    element?: never;
+}
+
+/**
+ * A group of settings rendered under a shared heading.
+ * Used as an inline group in the array returned by `getSettingDefinitions()`.
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDefinitionGroup<K extends string = string> {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    type: 'group';
+    /**
+     * Heading text displayed above the group.
+     * @public
+     * @since 1.13.0
+     */
+    heading?: string;
+    /**
+     * CSS classes to add to the group element.
+     * @public
+     * @since 1.13.0
+     */
+    cls?: string;
+    /**
+     * Search component configuration for the group header.
+     * @public
+     * @since 1.13.0
+     */
+    search?: (component: SearchComponent) => any;
+    /**
+     * Extra button configuration for the group header.
+     * @public
+     * @since 1.13.0
+     */
+    extraButtons?: ((component: ExtraButtonComponent) => any)[];
+    /**
+     * Settings within this group. Omit when using `render` for full ownership.
+     * @public
+     * @since 1.13.0
+     */
+    items?: SettingGroupItem<K>[];
+    /**
+     * Text to display when `items` is empty.
+     * @public
+     * @since 1.13.0
+     */
+    emptyState?: string | DocumentFragment;
+    /**
+     * When set, adds a drag handle to each item and enables drag-to-reorder. Called with old and new indices.
+     * @public
+     * @since 1.13.0
+     */
+    onReorder?: (oldIndex: number, newIndex: number) => void;
+    /**
+     * When set, adds a delete button to each item and enables Delete/Backspace keyboard shortcut. Called with the item index.
+     * @public
+     * @since 1.13.0
+     */
+    onDelete?: (index: number) => void;
+}
+
+/**
+ * A single item in the array returned by `getSettingDefinitions()`.
+ * @public
+ * @since 1.13.0
+ */
+export type SettingDefinitionItem<K extends string = string> = SettingDefinition<K> | SettingDefinitionGroup<K> | SettingDefinitionPage<K>;
+
+/**
+ * A declarative page of settings rendered as a navigable entry.
+ * Used as an inline page in the array returned by `getSettingDefinitions()`.
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDefinitionPage<K extends string = string> {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    type: 'page';
+    /**
+     * Display name shown as the navigable entry and page title.
+     * @public
+     * @since 1.13.0
+     */
+    name: string;
+    /**
+     * Description shown on the navigable entry.
+     * @public
+     * @since 1.13.0
+     */
+    desc?: string | DocumentFragment;
+    /**
+     * Settings within this page. Can include groups.
+     * @public
+     * @since 1.13.0
+     */
+    items: (SettingDefinition<K> | SettingDefinitionGroup<K>)[];
+}
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDefinitionRender extends SettingDefinitionBase {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    control?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    action?: never;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    render: (setting: Setting, group: SettingGroup) => void;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    element?: never;
+}
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDropdownControl<K extends string = string> extends SettingControlBase<string, K> {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    type: 'dropdown';
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    options: Record<string, string>;
+}
+
+/**
+ * @public
  * @since 1.11.0
  */
 export class SettingGroup {
@@ -5697,6 +6052,41 @@ export class SettingGroup {
      * @since 1.11.0
      */
     addExtraButton(cb: (component: ExtraButtonComponent) => any): this;
+
+}
+
+/**
+ * A single item within a SettingDefinitionGroup — either a setting or a navigable page.
+ * @public
+ * @since 1.13.0
+ */
+export type SettingGroupItem<K extends string = string> = SettingDefinition<K> | SettingDefinitionPage<K>;
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingSliderControl<K extends string = string> extends SettingControlBase<number, K> {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    type: 'slider';
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    min: number;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    max: number;
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    step: number;
 }
 
 /**
@@ -5725,11 +6115,49 @@ export abstract class SettingTab {
     containerEl: HTMLElement;
 
     /**
-     * Called when the settings tab should be rendered.
+     * Nested setting definitions as returned by getSettingDefinitions().
+     * Populated by update().
+     * @public
+     * @since 1.13.0
+     */
+    settingItems: SettingDefinitionItem[];
+
+    /**
+     * Override to provide setting definitions. Return an array of definitions
+     * and inline groups. Called on every display() and once when the tab is
+     * added to the setting modal for search indexing.
+     * @public
+     * @since 1.13.0
+     */
+    getSettingDefinitions(): SettingDefinitionItem[];
+    /**
+     * Stores the result of getSettingDefinitions() for rendering and search indexing.
+     * Called by addSettingTab() and by dynamic tabs when their data changes.
+     * @public
+     * @since 1.13.0
+     */
+    update(): void;
+    /**
+     * Get the value and onChange handler bound to a control's key.
+     * By default, reads/writes vault config. Subclasses like PluginSettingTab
+     * set configSource/configSave to bind to a different data source.
+     * @public
+     * @since 1.13.0
+     */
+    getControlBinding(key: string): SettingControlBinding;
+
+    /**
+     * Override to render the tab imperatively.
+     *
+     * Not called when {@link getSettingDefinitions} returns a non-empty array;
+     * the tab is rendered declaratively from those definitions instead. Only
+     * implement display() as a fallback for plugins that need to support
+     * Obsidian versions older than 1.13.0.
      * @see {@link https://docs.obsidian.md/Plugins/User+interface/Settings#Register+a+settings+tab}
+     * @deprecated Since 1.13.0. Use {@link getSettingDefinitions} instead.
      * @public
      */
-    abstract display(): void;
+    display(): void;
     /**
      * Hides the contents of the setting tab.
      * Any registered components should be unloaded when the view is hidden.
@@ -5737,6 +6165,35 @@ export abstract class SettingTab {
      * @public
      */
     hide(): void;
+}
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingTextControl<K extends string = string> extends SettingControlBase<string, K> {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    type: 'text';
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    placeholder?: string;
+}
+
+/**
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingToggleControl<K extends string = string> extends SettingControlBase<boolean, K> {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    type: 'toggle';
 }
 
 /**
