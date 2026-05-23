@@ -5880,7 +5880,7 @@ export interface SettingControlBase<V, K extends string = string> {
  * @public
  * @since 1.13.0
  */
-export type SettingDefinition<K extends string = string> = SettingDefinitionControl<K> | SettingDefinitionRender | SettingDefinitionElement | SettingDefinitionAction | SettingDefinitionEmpty;
+export type SettingDefinition<K extends string = string> = SettingDefinitionControl<K> | SettingDefinitionRender | SettingDefinitionAction | SettingDefinitionEmpty;
 
 /**
  * @public
@@ -5910,11 +5910,26 @@ export interface SettingDefinitionAction extends SettingDefinitionBase {
      * @since 1.13.0
      */
     render?: never;
+}
+
+/**
+ * Configuration for a {@link SettingDefinitionList}'s `addItem` affordance.
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDefinitionAddItem {
     /**
+     * Mobile row label and desktop button tooltip.
      * @public
      * @since 1.13.0
      */
-    element?: never;
+    name: string;
+    /**
+     * Called when the affordance is clicked or tapped.
+     * @public
+     * @since 1.13.0
+     */
+    action: () => void;
 }
 
 /**
@@ -5978,38 +5993,6 @@ export interface SettingDefinitionControl<K extends string = string> extends Set
      * @since 1.13.0
      */
     render?: never;
-    /**
-     * @public
-     * @since 1.13.0
-     */
-    element?: never;
-}
-
-/**
- * @public
- * @since 1.13.0
- */
-export interface SettingDefinitionElement extends SettingDefinitionBase {
-    /**
-     * @public
-     * @since 1.13.0
-     */
-    control?: never;
-    /**
-     * @public
-     * @since 1.13.0
-     */
-    action?: never;
-    /**
-     * @public
-     * @since 1.13.0
-     */
-    render?: never;
-    /**
-     * @public
-     * @since 1.13.0
-     */
-    element: (listEl: HTMLElement) => void;
 }
 
 /**
@@ -6032,16 +6015,13 @@ export interface SettingDefinitionEmpty extends SettingDefinitionBase {
      * @since 1.13.0
      */
     render?: never;
-    /**
-     * @public
-     * @since 1.13.0
-     */
-    element?: never;
 }
 
 /**
- * A group of settings rendered under a shared heading.
- * Used as an inline group in the array returned by `getSettingDefinitions()`.
+ * A group of settings rendered under a shared heading. Used as an inline
+ * group in the array returned by `getSettingDefinitions()`. For collections
+ * of mutable data (with add/delete/reorder affordances), use
+ * {@link SettingDefinitionList} instead.
  * @public
  * @since 1.13.0
  */
@@ -6050,7 +6030,7 @@ export interface SettingDefinitionGroup<K extends string = string> {
      * @public
      * @since 1.13.0
      */
-    type: 'group';
+    type: 'group' | 'list';
     /**
      * Heading text displayed above the group.
      * @public
@@ -6064,23 +6044,54 @@ export interface SettingDefinitionGroup<K extends string = string> {
      */
     cls?: string;
     /**
-     * Search component configuration for the group header.
+     * Search component configuration for the header.
      * @public
      * @since 1.13.0
      */
     search?: (component: SearchComponent) => any;
     /**
-     * Extra button configuration for the group header.
+     * Extra button configuration for the header.
      * @public
      * @since 1.13.0
      */
     extraButtons?: ((component: ExtraButtonComponent) => any)[];
     /**
-     * Settings within this group. Omit when using `render` for full ownership.
+     * Settings within this group.
      * @public
      * @since 1.13.0
      */
     items?: SettingGroupItem<K>[];
+    /**
+     * Controls whether the group is rendered. `false` or `() => false` hides
+     * it entirely (heading, controls, and items). Evaluated on each render.
+     * Default: true.
+     * @public
+     * @since 1.13.0
+     */
+    visible?: boolean | (() => boolean);
+}
+
+/**
+ * A single item in the array returned by `getSettingDefinitions()`.
+ * @public
+ * @since 1.13.0
+ */
+export type SettingDefinitionItem<K extends string = string> = SettingDefinition<K> | SettingDefinitionGroup<K> | SettingDefinitionList<K> | SettingDefinitionPage<K>;
+
+/**
+ * A specialized {@link SettingDefinitionGroup} for collections of mutable
+ * data: entries the user adds, reorders, or removes. Rendered with a more
+ * compact visual style than a group, and supports `emptyState`, `onReorder`,
+ * and `onDelete` for the mutation affordances.
+ * @public
+ * @since 1.13.0
+ */
+export interface SettingDefinitionList<K extends string = string> extends SettingDefinitionGroup<K> {
+    /**
+     * @public
+     * @since 1.13.0
+     */
+    type: 'list';
     /**
      * Text to display when `items` is empty.
      * @public
@@ -6100,21 +6111,19 @@ export interface SettingDefinitionGroup<K extends string = string> {
      */
     onDelete?: (index: number) => void;
     /**
-     * Controls whether the group is rendered. `false` or `() => false` hides
-     * the entire group (heading and items). Evaluated on each render.
-     * Default: true.
+     * Add-entry affordance. The framework renders a platform-appropriate
+     * control: on desktop, a `+` button in the list header (with `name` as
+     * the tooltip); on mobile, a tappable `+ {name}` row appended below
+     * the list.
+     *
+     * The mobile row is not part of the indexed `items`: it does not appear
+     * in search, does not receive delete or reorder affordances, and is not
+     * counted by `onDelete`/`onReorder` indices.
      * @public
      * @since 1.13.0
      */
-    visible?: boolean | (() => boolean);
+    addItem?: SettingDefinitionAddItem;
 }
-
-/**
- * A single item in the array returned by `getSettingDefinitions()`.
- * @public
- * @since 1.13.0
- */
-export type SettingDefinitionItem<K extends string = string> = SettingDefinition<K> | SettingDefinitionGroup<K> | SettingDefinitionPage<K>;
 
 /**
  * A declarative page of settings rendered as a navigable entry.
@@ -6189,11 +6198,6 @@ export interface SettingDefinitionRender extends SettingDefinitionBase {
      * @since 1.13.0
      */
     render: (setting: Setting, group: SettingGroup) => void | (() => void);
-    /**
-     * @public
-     * @since 1.13.0
-     */
-    element?: never;
 }
 
 /**
