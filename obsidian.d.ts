@@ -2276,6 +2276,7 @@ export class DropdownComponent extends ValueComponent<string> {
      * @public
      */
     constructor(containerEl: HTMLElement);
+
     /**
      * @public
      * @since 1.2.3
@@ -5888,11 +5889,12 @@ export type SettingDefinition<K extends string = string> = SettingDefinitionCont
  */
 export interface SettingDefinitionAction extends SettingDefinitionBase {
     /**
-     * Callback invoked when the action setting is clicked.
+     * Callback invoked when the action setting is clicked. Receives the row's
+     * current index within its parent group or list.
      * @public
      * @since 1.13.0
      */
-    action: () => void;
+    action: (index: number) => void;
     /**
      * Disables the row. Evaluated on each render. Call `update()` on the
      * setting tab to re-evaluate.
