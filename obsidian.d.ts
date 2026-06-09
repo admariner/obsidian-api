@@ -2258,6 +2258,41 @@ export interface Debouncer<T extends unknown[], V> {
 export function displayTooltip(newTargetEl: HTMLElement, content: string | DocumentFragment, options?: TooltipOptions): void;
 
 /**
+ * A read-only display value for a setting row: a value label and an optional
+ * status indicator. On a navigable row, it surfaces the value edited on the
+ * page the row opens, so the user can see it without opening that page.
+ * @public
+ * @since 1.13.1
+ */
+export class DisplayValueComponent {
+    /**
+     * @public
+     * @since 1.13.1
+     */
+    valueEl: HTMLElement;
+
+    /**
+     * @public
+     */
+    constructor(containerEl: HTMLElement);
+    /**
+     * Set the value label text. Pass an empty string or `null` to clear it.
+     * @public
+     * @since 1.13.1
+     */
+    setValue(value: string | null): this;
+    /**
+     * Show a status indicator on the row. Use `'warning'` when the value needs
+     * the user's attention; the explanation itself belongs on the page this
+     * row leads to, while this only signals that there is something to look at.
+     * Pass `null` to clear it.
+     * @public
+     * @since 1.13.1
+     */
+    setStatus(status: 'warning' | null): this;
+}
+
+/**
  * @public
  * @since 0.9.7
  */
@@ -4253,6 +4288,7 @@ export class Menu extends Component implements HistoryHandler {
      * @since 1.1.0
      */
     showAtPosition(position: MenuPositionDef, doc?: Document): this;
+
     /**
      * @public
      */
@@ -5687,10 +5723,8 @@ export class Setting {
      */
     components: BaseComponent[];
     /**
-     * Error message element shown below the input. Lives inside `controlEl`
-     * as a wrapped flex child; `controlEl`'s implicit min-content width keeps
-     * the input row from wrapping so only the error claims its own line.
-     * Lazily created by {@link setErrorMessage}.
+     * Error message element shown below the input.
+     * Created by {@link setErrorMessage}.
      * @public
      * @since 1.13.0
      */
@@ -5707,6 +5741,14 @@ export class Setting {
      * @since 1.13.0
      */
     setErrorMessage(message: string | null): this;
+    /**
+     * Add a read-only display value to the row. On a navigable row, this
+     * surfaces the value edited on the page the row opens, so the user can see
+     * it without opening that page.
+     * @public
+     * @since 1.13.1
+     */
+    addDisplayValue(cb: (component: DisplayValueComponent) => any): this;
     /**
      * @public
      * @since 0.9.7
@@ -5895,12 +5937,12 @@ export type SettingDefinition<K extends string = string> = SettingDefinitionCont
  */
 export interface SettingDefinitionAction extends SettingDefinitionBase {
     /**
-     * Callback invoked when the action setting is clicked. Receives the row's
-     * current index within its parent group or list.
+     * Callback invoked when the action setting is clicked. Receives the row
+     * element and the row's current index within its parent group or list.
      * @public
      * @since 1.13.0
      */
-    action: (index: number) => void;
+    action: (el: HTMLElement, index: number) => void;
     /**
      * Disables the row. Evaluated on each render. Call `update()` on the
      * setting tab to re-evaluate.
@@ -5933,11 +5975,12 @@ export interface SettingDefinitionAddItem {
      */
     name: string;
     /**
-     * Called when the affordance is clicked or tapped.
+     * Called when the affordance is clicked or tapped. Receives the affordance
+     * element (the `+` button on desktop, the add-item row on mobile).
      * @public
      * @since 1.13.0
      */
-    action: () => void;
+    action: (el: HTMLElement) => void;
 }
 
 /**
@@ -6052,11 +6095,28 @@ export interface SettingDefinitionGroup<K extends string = string> {
      */
     cls?: string;
     /**
-     * Search component configuration for the header.
+     * Adds a search input to the group header that filters the group's
+     * children by `match(def, query)`. The query is preserved across
+     * re-renders and the filter is reapplied after each render.
      * @public
-     * @since 1.13.0
+     * @since 1.13.1
      */
-    search?: (component: SearchComponent) => any;
+    search?: {
+        /**
+         * Placeholder text for the search input.
+         * @public
+         * @since 1.13.1
+         */
+        placeholder?: string;
+        /**
+         * Predicate called for each direct child definition of this group.
+         * Return true to show the item, false to hide. Items with
+         * `searchable: false` bypass this filter and always show.
+         * @public
+         * @since 1.13.1
+         */
+        match: (def: SettingDefinition, query: string) => boolean;
+    };
     /**
      * Extra button configuration for the header.
      * @public
@@ -6157,6 +6217,22 @@ export interface SettingDefinitionPage<K extends string = string> {
      * @since 1.13.0
      */
     desc?: string | DocumentFragment;
+    /**
+     * Surfaces the current value on the entry, so the user can see it without
+     * opening the page where it is edited. Call `update()` on the setting tab
+     * to refresh it after the value changes.
+     * @public
+     * @since 1.13.1
+     */
+    displayValue?: string | (() => string);
+    /**
+     * Adds a status indicator to the entry. Use `'warning'` when the value on
+     * the page needs the user's attention. Call `update()` on the setting tab
+     * to refresh it after the underlying state changes.
+     * @public
+     * @since 1.13.1
+     */
+    status?: 'warning' | null | (() => 'warning' | null);
     /**
      * Inline items rendered as a declarative sub-page. Can include groups
      * and nested pages. Mutually exclusive with `page`.
@@ -6308,7 +6384,7 @@ export class SettingGroup {
      * @public
      * @since 1.11.0
      */
-    addClass(cls: string): this;
+    addClass(...classes: string[]): this;
     /**
      * @public
      * @since 1.11.0
@@ -6456,6 +6532,13 @@ export interface SettingSliderControl<K extends string = string> extends Setting
      * @since 1.13.0
      */
     step: number;
+    /**
+     * Formats the value shown inline next to the slider. Return an empty
+     * string to hide the inline value entirely.
+     * @public
+     * @since 1.13.1
+     */
+    displayFormat?: (value: number) => string;
 }
 
 /**
@@ -6678,15 +6761,18 @@ export class SliderComponent extends ValueComponent<number> {
      */
     getValuePretty(): string;
     /**
+     * Set a custom formatter for the value shown inline next to the slider.
      * @public
-     * @since 0.9.7
+     * @since 1.13.0
      */
-    setDynamicTooltip(): this;
+    setDisplayFormat(format: (value: number) => string): this;
     /**
      * @public
      * @since 0.9.7
+     * @deprecated The value is now always shown inline next to the slider.
      */
-    showTooltip(): void;
+    setDynamicTooltip(): this;
+
     /**
      * @public
      * @since 0.9.7
