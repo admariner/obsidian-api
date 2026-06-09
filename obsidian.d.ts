@@ -1640,15 +1640,6 @@ export type CliFlags = Record<string, CliFlag>;
 export type CliHandler = (params: CliData) => string | Promise<string>;
 
 /**
- * A closeable component that can get dismissed via the Android 'back' button.
- * @public
- */
-export interface CloseableComponent {
-    /** @public */
-    close(): void;
-}
-
-/**
  * Color picker component. Values are by default 6-digit hash-prefixed hex strings like `#000000`.
  * @public
  * @since 1.0.0
@@ -3396,6 +3387,16 @@ export function hexToArrayBuffer(hex: string): ArrayBuffer;
 /**
  * @public
  */
+export interface HistoryHandler {
+    /** @public */
+    onHistoryBack(): void;
+    /** @public */
+    onHistoryForward?(): void;
+}
+
+/**
+ * @public
+ */
 export interface Hotkey {
     /** @public */
     modifiers: Modifier[];
@@ -4206,7 +4207,7 @@ export type MarkdownViewModeType = 'source' | 'preview';
 /**
  * @public
  */
-export class Menu extends Component implements CloseableComponent {
+export class Menu extends Component implements HistoryHandler {
 
     /**
      * @public
@@ -4437,7 +4438,7 @@ export class MetadataCache extends Events {
 /**
  * @public
  */
-export class Modal implements CloseableComponent {
+export class Modal implements HistoryHandler {
     /**
      * @public
      */
@@ -5161,7 +5162,7 @@ export enum PopoverState {
  * Base class for adding a type-ahead popover.
  * @public
  */
-export abstract class PopoverSuggest<T> implements ISuggestOwner<T>, CloseableComponent {
+export abstract class PopoverSuggest<T> implements ISuggestOwner<T>, HistoryHandler {
     /** @public */
     app: App;
     /** @public */
