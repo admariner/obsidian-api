@@ -5729,6 +5729,7 @@ export class Setting {
      * @since 1.13.0
      */
     errorEl: HTMLElement | null;
+
     /**
      * @public
      */
@@ -5875,7 +5876,7 @@ export interface SettingColorControl<K extends string = string> extends SettingC
  * @public
  * @since 1.13.0
  */
-export type SettingControl<K extends string = string> = SettingToggleControl<K> | SettingDropdownControl<K> | SettingTextControl<K> | SettingTextAreaControl<K> | SettingNumberControl<K> | SettingFileControl<K> | SettingFolderControl<K> | SettingSliderControl<K> | SettingColorControl<K>;
+export type SettingControl<K extends string = string> = SettingToggleControl<K> | SettingDropdownControl<K> | SettingTextControl<K> | SettingTextAreaControl<K> | SettingNumberControl<K> | SettingFileControl<K> | SettingFolderControl<K> | SettingSliderControl<K> | SettingColorControl<K> | SettingSecretControl<K>;
 
 /**
  * @public
@@ -6505,6 +6506,21 @@ export abstract class SettingPage {
      * @since 1.13.0
      */
     hide(): void;
+}
+
+/**
+ * Links the setting to a secret stored in SecretStorage. Persists the secret's
+ * key (a string reference), not the secret itself; the value is read from and
+ * managed through `app.secretStorage`.
+ * @public
+ * @since 1.13.2
+ */
+export interface SettingSecretControl<K extends string = string> extends SettingControlBase<string, K> {
+    /**
+     * @public
+     * @since 1.13.2
+     */
+    type: 'secret';
 }
 
 /**
